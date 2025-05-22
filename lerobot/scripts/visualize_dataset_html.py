@@ -64,7 +64,6 @@ from pathlib import Path
 import os
 from huggingface_hub import HfApi
 from huggingface_hub import hf_hub_download
-from huggingface_hub import login
 
 import numpy as np
 import pandas as pd
@@ -519,5 +518,4 @@ def main():
 
 
 if __name__ == "__main__":
-    login(token=HF_TOKEN)
     main()
