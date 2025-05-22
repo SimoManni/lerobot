@@ -61,16 +61,38 @@ import shutil
 import tempfile
 from io import StringIO
 from pathlib import Path
+import os
+from huggingface_hub import HfApi
+from huggingface_hub import hf_hub_download
+from huggingface_hub import login
 
 import numpy as np
 import pandas as pd
 import requests
 from flask import Flask, redirect, render_template, request, url_for
 
-from lerobot import available_datasets
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.utils import IterableNamespace
 from lerobot.common.utils.utils import init_logging
+
+HF_TOKEN = os.environ["HF_TOKEN"]
+
+def get_my_datasets() -> list[str]:
+    """
+    Returns a list of dataset repo_ids from your Hugging Face account.
+    Requires HF_TOKEN environment variable to be set.
+    """
+    if not HF_TOKEN:
+        raise RuntimeError("HF_TOKEN environment variable not set.")
+
+    hf_username = "smanni"
+    api = HfApi()
+
+    # Get private + public datasets owned by your account
+    datasets = api.list_datasets(author=hf_username, token=HF_TOKEN)
+
+    # Return list of repo IDs (e.g., "lerobot/taco_play")
+    return [ds.id for ds in datasets]
 
 
 def run_server(
@@ -116,10 +138,11 @@ def run_server(
             )
 
         featured_datasets = [
-            "lerobot/aloha_static_cups_open",
-            "lerobot/columbia_cairlab_pusht_real",
-            "lerobot/taco_play",
+            "smanni/grasp_basket_mpc_right_clean",
+            "smanni/grasp_basket_mpc_right",
+            "smanni/so100_object_box"
         ]
+        available_datasets = get_my_datasets()
         return render_template(
             "visualize_dataset_homepage.html",
             featured_datasets=featured_datasets,
@@ -149,6 +172,7 @@ def run_server(
                 "Make sure to convert your LeRobotDataset to v2 & above. See how to convert your dataset at https://github.com/huggingface/lerobot/pull/461",
                 400,
             )
+        print("Dataset info retrieved")
         dataset_version = (
             str(dataset.meta._version) if isinstance(dataset, LeRobotDataset) else dataset.codebase_version
         )
@@ -159,6 +183,7 @@ def run_server(
                 return "Make sure to convert your LeRobotDataset to v2 & above."
 
         episode_data_csv_str, columns, ignored_columns = get_episode_data(dataset, episode_id)
+        
         dataset_info = {
             "repo_id": f"{dataset_namespace}/{dataset_name}",
             "num_samples": dataset.num_frames
@@ -195,19 +220,18 @@ def run_server(
                 }
                 for video_key in video_keys
             ]
-
+            headers = {"Authorization": f"Bearer {HF_TOKEN}"}
             response = requests.get(
-                f"https://huggingface.co/datasets/{repo_id}/resolve/main/meta/episodes.jsonl", timeout=5
+                f"https://huggingface.co/datasets/{repo_id}/resolve/main/meta/episodes.jsonl",
+                headers=headers,
+                timeout=5,
             )
             response.raise_for_status()
-            # Split into lines and parse each line as JSON
             tasks_jsonl = [json.loads(line) for line in response.text.splitlines() if line.strip()]
-
             filtered_tasks_jsonl = [row for row in tasks_jsonl if row["episode_index"] == episode_id]
             tasks = filtered_tasks_jsonl[0]["tasks"]
 
         videos_info[0]["language_instruction"] = tasks
-
         if episodes is None:
             episodes = list(
                 range(dataset.num_episodes if isinstance(dataset, LeRobotDataset) else dataset.total_episodes)
@@ -279,14 +303,26 @@ def get_episode_data(dataset: LeRobotDataset | IterableNamespace, episode_index)
             .with_format("pandas")
         )
     else:
-        repo_id = dataset.repo_id
+        try:
+            path = hf_hub_download(
+                repo_id=dataset.repo_id,
+                repo_type="dataset",
+                filename=dataset.data_path.format(
+                    episode_chunk=int(episode_index) // dataset.chunks_size,
+                    episode_index=episode_index,
+                ),
+                token=HF_TOKEN
+            )
+            print(f"Downloaded path: {path}")
+            df = pd.read_parquet(path)
+            data = df[selected_columns] 
 
-        url = f"https://huggingface.co/datasets/{repo_id}/resolve/main/" + dataset.data_path.format(
-            episode_chunk=int(episode_index) // dataset.chunks_size, episode_index=episode_index
-        )
-        df = pd.read_parquet(url)
-        data = df[selected_columns]  # Select specific columns
-
+        except Exception as e:
+            print("!!! ERROR loading episode data:", e)
+            import traceback
+            traceback.print_exc()
+            return f"Error loading episode data: {e}", 500
+        
     rows = np.hstack(
         (
             np.expand_dims(data["timestamp"], axis=1),
@@ -330,8 +366,12 @@ def get_episode_language_instruction(dataset: LeRobotDataset, ep_index: int) -> 
 
 
 def get_dataset_info(repo_id: str) -> IterableNamespace:
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
     response = requests.get(
-        f"https://huggingface.co/datasets/{repo_id}/resolve/main/meta/info.json", timeout=5
+        f"https://huggingface.co/datasets/{repo_id}/resolve/main/meta/info.json",
+        headers=headers,
+        timeout=5,
     )
     response.raise_for_status()  # Raises an HTTPError for bad responses
     dataset_info = response.json()
@@ -479,4 +519,5 @@ def main():
 
 
 if __name__ == "__main__":
+    login(token=HF_TOKEN)
     main()
