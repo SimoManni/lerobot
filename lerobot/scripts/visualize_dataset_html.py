@@ -64,6 +64,7 @@ from pathlib import Path
 import os
 from huggingface_hub import HfApi
 from huggingface_hub import hf_hub_download
+from typing import List, Dict
 
 import numpy as np
 import pandas as pd
@@ -92,6 +93,28 @@ def get_my_datasets() -> list[str]:
 
     # Return list of repo IDs (e.g., "lerobot/taco_play")
     return [ds.id for ds in datasets]
+
+
+def get_filtered_datasets_by_keywords(datasets: List[str], keywords: List[str]) -> Dict[str, List[str]]:
+    categorized = {k: [] for k in keywords}
+    uncategorized = []
+
+    for ds in datasets:
+        matched = False
+        for keyword in keywords:
+            if keyword in ds:
+                categorized[keyword].append(ds)
+                matched = True
+        if not matched:
+            uncategorized.append(ds)
+
+    # Remove empty categories
+    categorized = {k: v for k, v in categorized.items() if v}
+
+    if uncategorized:
+        categorized["uncategorized"] = uncategorized
+
+    return categorized
 
 
 def run_server(
@@ -137,15 +160,19 @@ def run_server(
             )
 
         featured_datasets = [
-            "smanni/grasp_basket_mpc_right_clean",
-            "smanni/grasp_basket_mpc_right",
-            "smanni/so100_object_box"
+            "smanni/grasp_basket_mpc_diff_neck",
+            "smanni/grasp_basket_mpc_right_diff_neck",
+            "smanni/train_so100_all_radians"
         ]
         available_datasets = get_my_datasets()
+        filter_keywords = ["grasp_basket", "so100"]
+        categorized_datasets = get_filtered_datasets_by_keywords(available_datasets, filter_keywords)
+
+
         return render_template(
             "visualize_dataset_homepage.html",
             featured_datasets=featured_datasets,
-            lerobot_datasets=available_datasets,
+            categorized_datasets=categorized_datasets
         )
 
     @app.route("/<string:dataset_namespace>/<string:dataset_name>")
