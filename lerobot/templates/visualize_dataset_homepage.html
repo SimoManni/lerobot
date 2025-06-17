@@ -17,13 +17,18 @@
     }
 }">
     <!-- Video Background -->
-    <div class="fixed inset-0 w-full h-full overflow-hidden">
-        <video class="absolute min-w-full min-h-full w-auto h-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" autoplay muted loop>
-            <source src="https://huggingface.co/datasets/cadene/koch_bimanual_folding/resolve/v1.6/videos/observation.images.phone_episode_000037.mp4" type="video/mp4">
+    <div class="fixed inset-0 w-full h-full overflow-hidden z-0">
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            class="absolute w-full h-full object-cover top-0 left-0"
+        >
+            <source src="{{ url_for('static', filename='videos/homepage_video.mp4') }}" type="video/mp4">
             Your browser does not support HTML5 video.
         </video>
     </div>
-
     <!-- Overlay -->
     <div class="fixed inset-0 bg-black bg-opacity-80"></div>
 
@@ -31,9 +36,6 @@
     <div class="relative z-10 flex flex-col items-center justify-center h-screen overflow-y-auto">
         <div class="text-center mb-8 px-4">
             <h1 class="text-4xl font-bold mb-4">LeRobot Dataset Visualizer</h1>
-            <a href="https://x.com/RemiCadene/status/1825455895561859185" target="_blank" rel="noopener noreferrer" class="underline">
-                create & train your own robots
-            </a>
 
             <!-- Featured Datasets -->
             <div class="text-left inline-block mt-6">
@@ -46,19 +48,29 @@
             </div>
 
             <!-- Categorized Datasets -->
-            <div class="text-left inline-block mt-6">
-                <h3 class="font-semibold mb-2">Categorized Datasets:</h3>
-                {% for keyword, datasets in categorized_datasets.items() %}
-                    <div class="mb-4">
-                        <h4 class="text-lg underline">{{ keyword.replace('_', ' ')|title }}</h4>
-                        <ul class="list-disc list-inside">
-                            {% for dataset in datasets %}
-                                <li><a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">{{ dataset }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endfor %}
+            <div class="text-left inline-block mt-6 w-full max-w-3xl">
+                <h3 class="font-semibold text-xl mb-4">Categorized Datasets:</h3>
+
+                <div class="space-y-4">
+                    {% for keyword, datasets in categorized_datasets.items() %}
+                        <details class="bg-white bg-opacity-10 p-4 rounded-lg shadow-md">
+                            <summary class="cursor-pointer text-lg font-semibold text-blue-200 hover:text-white">
+                                {{ 'Other Datasets' if keyword == 'uncategorized' else keyword.replace('_', ' ')|title }} ({{ datasets|length }})
+                            </summary>
+                            <ul class="list-disc list-inside max-h-40 overflow-y-auto mt-2 pl-4 pr-2">
+                                {% for dataset in datasets %}
+                                    <li class="break-words">
+                                        <a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">
+                                            {{ dataset }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}
+                </div>
             </div>
+
         </div>
 
         <!-- Search Field -->

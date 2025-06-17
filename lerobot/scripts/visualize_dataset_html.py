@@ -431,8 +431,14 @@ def visualize_dataset_html(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Redirect video
     static_dir = output_dir / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
+    video_src = Path(__file__).parent.parent / "static" / "videos" / "homepage_video.mp4"
+    video_dst = static_dir / "videos" / "homepage_video.mp4"
+    video_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(video_src, video_dst)
+
 
     if dataset is None:
         if serve:
