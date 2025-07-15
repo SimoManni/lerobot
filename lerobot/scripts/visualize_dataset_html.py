@@ -165,7 +165,7 @@ def run_server(
             "smanni/train_so100_all_radians"
         ]
         available_datasets = get_my_datasets()
-        filter_keywords = ["grasp_basket", "so100"]
+        filter_keywords = ["grasp_basket", "claw", "so100"]
         categorized_datasets = get_filtered_datasets_by_keywords(available_datasets, filter_keywords)
 
 
