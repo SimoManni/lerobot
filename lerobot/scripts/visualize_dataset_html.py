@@ -65,6 +65,7 @@ import os
 from huggingface_hub import HfApi
 from huggingface_hub import hf_hub_download
 from typing import List, Dict
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -95,24 +96,45 @@ def get_my_datasets() -> list[str]:
     return [ds.id for ds in datasets]
 
 
-def get_filtered_datasets_by_keywords(datasets: List[str], keywords: List[str]) -> Dict[str, List[str]]:
-    categorized = {k: [] for k in keywords}
-    uncategorized = []
+def categorize_datasets_by_robot_and_type(datasets: List[str]) -> Dict[str, Dict[str, List[str]]]:
+    categorized = defaultdict(lambda: defaultdict(list))
+    other = []
 
     for ds in datasets:
-        matched = False
-        for keyword in keywords:
-            if keyword in ds:
-                categorized[keyword].append(ds)
-                matched = True
-        if not matched:
-            uncategorized.append(ds)
+        lower_ds = ds.lower()
 
-    # Remove empty categories
-    categorized = {k: v for k, v in categorized.items() if v}
+        # Primary robot category
+        if "so100" in lower_ds:
+            category = "So100"
+            categorized[category]["All"].append(ds)
 
-    if uncategorized:
-        categorized["uncategorized"] = uncategorized
+        elif "mirokai" in lower_ds:
+            category = "Mirokai"
+            categorized[category]["All"].append(ds)
+
+        elif "claw" in lower_ds or "hand" in lower_ds:
+            category = "GraspingDev"
+            if "claw" in lower_ds:
+                subtype = "Claw"
+            elif "hand" in lower_ds:
+                subtype = "Hand"
+            else:
+                subtype = "Unspecified"
+            categorized[category][subtype].append(ds)
+
+        else:
+            other.append(ds)
+
+    # Reorder datasets in each subcategory
+    for category, subcats in categorized.items():
+        for subcat, ds_list in subcats.items():
+            train_datasets = [ds for ds in ds_list if "eval" not in ds.lower()]
+            eval_datasets = [ds for ds in ds_list if "eval" in ds.lower()]
+            categorized[category][subcat] = train_datasets + eval_datasets
+
+    # Add remaining uncategorized datasets
+    if other:
+        categorized["Other"]["Uncategorized"] = other
 
     return categorized
 
@@ -165,14 +187,11 @@ def run_server(
             "smanni/train_so100_all_radians"
         ]
         available_datasets = get_my_datasets()
-        filter_keywords = ["grasp_basket", "claw", "so100"]
-        categorized_datasets = get_filtered_datasets_by_keywords(available_datasets, filter_keywords)
-
 
         return render_template(
             "visualize_dataset_homepage.html",
             featured_datasets=featured_datasets,
-            categorized_datasets=categorized_datasets
+            categorized_datasets=categorize_datasets_by_robot_and_type(available_datasets)
         )
 
     @app.route("/<string:dataset_namespace>/<string:dataset_name>")
