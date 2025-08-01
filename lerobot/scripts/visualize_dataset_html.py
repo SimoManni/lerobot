@@ -97,44 +97,37 @@ def get_my_datasets() -> list[str]:
 
 
 def categorize_datasets_by_robot_and_type(datasets: List[str]) -> Dict[str, Dict[str, List[str]]]:
-    categorized = defaultdict(lambda: defaultdict(list))
-    other = []
+    categorized = {
+        "GraspingDev": {"Claw": [], "Hand": []},
+        "Mirokai": {"All": []},
+        "So100": {"All": []},
+        "Other": {"Uncategorized": []},
+    }
 
     for ds in datasets:
         lower_ds = ds.lower()
 
-        # Primary robot category
         if "so100" in lower_ds:
-            category = "So100"
-            categorized[category]["All"].append(ds)
+            categorized["So100"]["All"].append(ds)
 
         elif "mirokai" in lower_ds:
-            category = "Mirokai"
-            categorized[category]["All"].append(ds)
+            categorized["Mirokai"]["All"].append(ds)
 
-        elif "claw" in lower_ds or "hand" in lower_ds:
-            category = "GraspingDev"
-            if "claw" in lower_ds:
-                subtype = "Claw"
-            elif "hand" in lower_ds:
-                subtype = "Hand"
-            else:
-                subtype = "Unspecified"
-            categorized[category][subtype].append(ds)
+        elif "claw" in lower_ds:
+            categorized["GraspingDev"]["Claw"].append(ds)
+
+        elif "hand" in lower_ds:
+            categorized["GraspingDev"]["Hand"].append(ds)
 
         else:
-            other.append(ds)
+            categorized["Other"]["Uncategorized"].append(ds)
 
-    # Reorder datasets in each subcategory
-    for category, subcats in categorized.items():
-        for subcat, ds_list in subcats.items():
+    # Sort: train/default first, then eval
+    for subcats in categorized.values():
+        for key, ds_list in subcats.items():
             train_datasets = [ds for ds in ds_list if "eval" not in ds.lower()]
             eval_datasets = [ds for ds in ds_list if "eval" in ds.lower()]
-            categorized[category][subcat] = train_datasets + eval_datasets
-
-    # Add remaining uncategorized datasets
-    if other:
-        categorized["Other"]["Uncategorized"] = other
+            subcats[key] = train_datasets + eval_datasets
 
     return categorized
 

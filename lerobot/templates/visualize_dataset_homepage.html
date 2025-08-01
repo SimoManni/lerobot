@@ -50,15 +50,19 @@
             <!-- Categorized Datasets -->
             <div class="text-left inline-block mt-6 w-full max-w-3xl">
                 <h3 class="font-semibold text-xl mb-4">Categorized Datasets:</h3>
-
                 <div class="space-y-4">
-                    {% for keyword, datasets in categorized_datasets.items() %}
-                        <details class="bg-white bg-opacity-10 p-4 rounded-lg shadow-md">
-                            <summary class="cursor-pointer text-lg font-semibold text-blue-200 hover:text-white">
-                                {{ 'Other Datasets' if keyword == 'uncategorized' else keyword.replace('_', ' ')|title }} ({{ datasets|length }})
+
+                    <!-- GraspingDev section with two always-visible dropdowns -->
+                    <div class="bg-white bg-opacity-10 p-4 rounded-lg shadow-md">
+                        <h4 class="text-lg font-semibold text-blue-200 mb-2">GraspingDev</h4>
+
+                        <!-- Claw Dropdown -->
+                        <details class="mb-3">
+                            <summary class="cursor-pointer text-md font-semibold text-blue-100 hover:text-white">
+                                Claw ({{ categorized_datasets["GraspingDev"]["Claw"]|length }})
                             </summary>
                             <ul class="list-disc list-inside max-h-40 overflow-y-auto mt-2 pl-4 pr-2">
-                                {% for dataset in datasets %}
+                                {% for dataset in categorized_datasets["GraspingDev"]["Claw"] %}
                                     <li class="break-words">
                                         <a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">
                                             {{ dataset }}
@@ -67,10 +71,67 @@
                                 {% endfor %}
                             </ul>
                         </details>
+
+                        <!-- Hand Dropdown -->
+                        <details>
+                            <summary class="cursor-pointer text-md font-semibold text-blue-100 hover:text-white">
+                                Hand ({{ categorized_datasets["GraspingDev"]["Hand"]|length }})
+                            </summary>
+                            <ul class="list-disc list-inside max-h-40 overflow-y-auto mt-2 pl-4 pr-2">
+                                {% for dataset in categorized_datasets["GraspingDev"]["Hand"] %}
+                                    <li class="break-words">
+                                        <a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">
+                                            {{ dataset }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    </div>
+
+                    <!-- So100 and Mirokai dropdowns -->
+                    {% for robot in ["So100", "Mirokai"] %}
+                        {% if categorized_datasets[robot] %}
+                            <details class="bg-white bg-opacity-10 p-4 rounded-lg shadow-md">
+                                <summary class="cursor-pointer text-lg font-semibold text-blue-200 hover:text-white">
+                                    {{ robot }} ({{ categorized_datasets[robot]["All"]|length }})
+                                </summary>
+                                <ul class="list-disc list-inside max-h-40 overflow-y-auto mt-2 pl-4 pr-2">
+                                    {% for dataset in categorized_datasets[robot]["All"] %}
+                                        <li class="break-words">
+                                            <a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">
+                                                {{ dataset }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                        {% endif %}
                     {% endfor %}
+
+                    <!-- Other dropdown -->
+                    {% if categorized_datasets["Other"]["Uncategorized"] %}
+                        <details class="bg-white bg-opacity-10 p-4 rounded-lg shadow-md">
+                            <summary class="cursor-pointer text-lg font-semibold text-blue-200 hover:text-white">
+                                Other Datasets ({{ categorized_datasets["Other"]["Uncategorized"]|length }})
+                            </summary>
+                            <ul class="list-disc list-inside max-h-40 overflow-y-auto mt-2 pl-4 pr-2">
+                                {% for dataset in categorized_datasets["Other"]["Uncategorized"] %}
+                                    <li class="break-words">
+                                        <a href="/{{ dataset }}" class="text-blue-300 hover:text-blue-100 hover:underline">
+                                            {{ dataset }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endif %}
+
                 </div>
             </div>
 
+
+            
         </div>
 
         <!-- Search Field -->
